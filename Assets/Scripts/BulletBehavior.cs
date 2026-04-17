@@ -4,61 +4,67 @@ using UnityEngine;
 
 public class BulletBehavior : MonoBehaviour
 {
-    public static float bulletSpeed;
-    [SerializeField] Transform currentTarget;
-    [SerializeField] float timeToDespawn = 3f;
-    [SerializeField] Rigidbody rb;
-
+    // Despawn Stats
     private float timeOfDeath;
-    private bool hasTarget = false;
+    private float timeToDespawn = 5f;
+    // What's being shot?
+    private Transform currentTarget;
+    // How fast?
+    private float bulletSpeed;
 
 
-    // Start is called before the first frame update
     void Start()
     {
+        // Despawn if not hit timer
         timeOfDeath = Time.time + timeToDespawn;
-        rb = GetComponent<Rigidbody>();
         bulletSpeed = 100f;
     }
 
-    // Update is called once per frame
     void Update()
     {
-
-        if(transform == null) Destroy(gameObject);
-        float radius = 15f;
-        Collider[] hits = Physics.OverlapSphere(transform.position, radius);
-
-
-
-
-        foreach (Collider collider in hits)
+        // If there is no target
+        if (currentTarget == null)
         {
-            if (hasTarget) break;
-            if (collider.gameObject.CompareTag("Enemy"))
-            {
-                currentTarget = collider.transform;
-                hasTarget = true;
-                break;
-            }
+            // Destroy self
+            Destroy(gameObject);
+            return;
         }
 
-        if(Time.time >= timeOfDeath) { Destroy(gameObject); }
+        // If lifetime has expired
+        if (Time.time >= timeOfDeath) {
+            // Destroy self
+            Destroy(gameObject);
+            return;
+        }
 
-
-        transform.LookAt(currentTarget);
-        Vector3 direction = (currentTarget.position - transform.position).normalized;
-        rb.MovePosition(transform.position + direction * bulletSpeed * Time.deltaTime);
+        // Move toward target
+        Fire();
     }
 
 
+    private void Fire()
+    {
+        Vector3 direction = (currentTarget.position - transform.position).normalized;
+        transform.Translate(direction * bulletSpeed * Time.deltaTime);
+    }
+
+
+    // When hit something
     private void OnCollisionEnter(Collision collision)
     {
+        // If it's an enemy
         if (collision.gameObject.CompareTag("Enemy"))
         {
-            EconomyController.Coins+=2;
-            Destroy(collision.gameObject);
+            // Destroy enemy
+            collision.gameObject.GetComponent<EnemyBehavior>().Die();
+            // Destroy self
             Destroy(gameObject);
         }
+    }
+
+    // Target setter, called by TurretBehavior.cs
+    public void SetTarget(Transform target)
+    {
+        currentTarget = target;
     }
 }

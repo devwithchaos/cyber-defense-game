@@ -1,32 +1,66 @@
-using System.Collections;
-using System.Collections.Generic;
+using System;
 using UnityEngine;
 
 public class EnemySpawner : MonoBehaviour
 {
-    public static float spawnInterval;
     [SerializeField] GameObject enemyPrefab;
-    [SerializeField] Transform enemySpawnPoint;
+    [SerializeField] Transform enemySpawnpoint;
 
+
+    // "I just spawned something."
+    public event Action<GameObject> OnSpawn;
+
+    // Spawn timers
+    private float spawnInterval;
     private float nextSpawnTime;
-    // Start is called before the first frame update
+
+    private bool isGameOver = false;
+
+    [Header("Managers")]
+    [SerializeField] RoundManager roundManager;
+
+
     void Start()
     {
+        // Set first spawn time.
+        spawnInterval = 1.2f;
+        roundManager.OnFinalRoundComplete += StopSpawning;
+        roundManager.OnNewRound += UpdateRoundSpeed;
         SetNextSpawnTime();
-        spawnInterval = 1f;
     }
 
-    // Update is called once per frame
-    void Update()
+    void FixedUpdate()
     {
-        
-        if(Time.time >= nextSpawnTime)
+        TrySpawn();
+    }
+
+    private void TrySpawn()
+    {
+        // If ready to spawn
+        if (Time.time >= nextSpawnTime && !isGameOver)
         {
-            GameObject newEnemy = Instantiate(enemyPrefab, enemySpawnPoint.position, Quaternion.identity);
-            newEnemy.GetComponent<Rigidbody>().isKinematic = false; 
+            // Spawn enemy, unlock movement, reset timer
+            GameObject newEnemy = Instantiate(enemyPrefab, enemySpawnpoint.position, Quaternion.identity);
+
+            OnSpawn?.Invoke(newEnemy);
+
+            newEnemy.GetComponent<Rigidbody>().isKinematic = false;
             SetNextSpawnTime();
         }
     }
 
+    // Time until next spawn function
     void SetNextSpawnTime() => nextSpawnTime = Time.time + spawnInterval;
+
+
+    void UpdateRoundSpeed(int round)
+    {
+        spawnInterval -= .2f;
+        spawnInterval = Mathf.Max(spawnInterval, 0.25f);
+    }
+
+    void StopSpawning()
+    {
+        isGameOver = true;
+    }
 }
